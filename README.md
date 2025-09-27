@@ -1,7 +1,3 @@
-Ok bro 😎, naan unga ku **complete ready-to-copy README.md template** kuduthu, unga backend GitHub repo la direct paste pannalaam.
-
----
-
 ````markdown
 # Food Donation Backend
 
@@ -87,8 +83,3 @@ git commit -m "Add complete README"
 git push origin main
 ````
 
-✅ Ippo ungal backend repo la **complete README** ready ah irukum, live links, env details, and setup instructions ellam included.
-
-If you want, naan frontend ku **README.md template** kuduthu, same ready-to-copy format la kodukkalaam.
-
-Venuma?
