@@ -142,19 +142,21 @@ exports.pickupDonation = async (req, res) => {
 };
 
 // ================== Mark donation as delivered (Donor only) ==================
+// ================== Mark donation as delivered (Donor or Admin) ==================
 exports.deliverDonation = async (req, res) => {
   try {
-    if (req.user.role !== "donor") {
-      return res
-        .status(403)
-        .json({ msg: "Only donors can mark donations as delivered" });
-    }
-
     const donation = await Donation.findById(req.params.id);
     if (!donation) return res.status(404).json({ msg: "Donation not found" });
 
-    if (donation.donor.toString() !== req.user.userId) {
-      return res.status(403).json({ msg: "Not authorized" });
+    // Only donor or admin can mark delivered
+    if (req.user.role === "donor") {
+      if (donation.donor.toString() !== req.user.userId) {
+        return res.status(403).json({ msg: "Not authorized" });
+      }
+    } else if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ msg: "Only donors or admins can mark as delivered" });
     }
 
     if (donation.status !== "pickedUp") {
@@ -172,20 +174,21 @@ exports.deliverDonation = async (req, res) => {
   }
 };
 
-// ================== Mark donation as completed (Receiver only) ==================
+// ================== Mark donation as completed (Receiver or Admin) ==================
 exports.completeDonation = async (req, res) => {
   try {
-    if (req.user.role !== "receiver") {
-      return res
-        .status(403)
-        .json({ msg: "Only receivers can mark donations as completed" });
-    }
-
     const donation = await Donation.findById(req.params.id);
     if (!donation) return res.status(404).json({ msg: "Donation not found" });
 
-    if (donation.receiver.toString() !== req.user.userId) {
-      return res.status(403).json({ msg: "Not authorized" });
+    // Only receiver or admin can mark completed
+    if (req.user.role === "receiver") {
+      if (donation.receiver.toString() !== req.user.userId) {
+        return res.status(403).json({ msg: "Not authorized" });
+      }
+    } else if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ msg: "Only receivers or admins can mark as completed" });
     }
 
     if (donation.status !== "delivered") {
