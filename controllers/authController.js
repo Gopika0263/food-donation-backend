@@ -6,6 +6,19 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
+    // ✅ Only allow fixed admin
+    if (role === "admin") {
+      if (
+        email !== "gopikagk@gmail.com" ||
+        password !== "gopika@123" ||
+        name !== "gopika"
+      ) {
+        return res.status(403).json({ msg: "You are not admin" });
+      }
+    } else if (role !== "donor" && role !== "receiver") {
+      return res.status(400).json({ msg: "Invalid role selected" });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(400).json({ msg: "User already exists" });

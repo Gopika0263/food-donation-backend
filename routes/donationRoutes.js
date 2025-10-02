@@ -7,16 +7,16 @@ const {
   claimDonation,
   getMyDonations,
   getMyClaims,
-  pickupDonation, // already existing
-  deliverDonation, // 🔥 new
-  completeDonation, // 🔥 new
+  pickupDonation,
+  deliverDonation,
+  completeDonation,
 } = require("../controllers/donationController");
 
 // Create donation (Donor only)
 router.post("/", authMiddleware, createDonation);
 
-// Get available donations (Public)
-router.get("/", getAvailableDonations);
+// Get available donations (for receivers)
+router.get("/", authMiddleware, getAvailableDonations);
 
 // Claim donation (Receiver only)
 router.put("/:id/claim", authMiddleware, claimDonation);

@@ -1,207 +1,164 @@
 const Donation = require("../models/Donation");
 
-// ================== Create a new donation (Donor only) ==================
+// Create Donation
 exports.createDonation = async (req, res) => {
   try {
-    if (req.user.role !== "donor") {
-      return res.status(403).json({ msg: "Only donors can create donations" });
-    }
-
-    const { foodType, quantity, pickupAddress } = req.body;
-    if (!foodType || !quantity || !pickupAddress) {
-      return res.status(400).json({ msg: "All fields are required" });
-    }
+    const {
+      foodType,
+      quantity,
+      pickupAddress,
+      phone,
+      expiry,
+      cookedTime,
+      location,
+      organization,
+    } = req.body;
 
     const newDonation = new Donation({
       donor: req.user.userId,
       foodType,
       quantity,
       pickupAddress,
+      phone,
+      expiry,
+      cookedTime,
+      location,
+      organization,
+      status: "available",
     });
 
     await newDonation.save();
-    res.status(201).json({ msg: "Donation created", donation: newDonation });
+    res.status(201).json({
+      message: "Donation created successfully",
+      donation: newDonation,
+    });
   } catch (err) {
-    console.error("❌ Create donation error:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error creating donation", error: err.message });
   }
 };
 
-// ================== Get all available donations (Public) ==================
+// Get available donations (for receivers)
 exports.getAvailableDonations = async (req, res) => {
   try {
-    const donations = await Donation.find({ status: "available" }).populate(
-      "donor",
-      "name"
-    );
-    res.json(donations);
+    const donations = await Donation.find({ status: "available" })
+      .populate("donor", "name email")
+      .populate("receiver", "name email"); // receiver is null here
+    res.status(200).json(donations);
   } catch (err) {
-    console.error("❌ Get donations error:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================== Claim a donation (Receiver only) ==================
+// Claim donation (Receiver)
 exports.claimDonation = async (req, res) => {
   try {
-    if (req.user.role !== "receiver") {
-      return res
-        .status(403)
-        .json({ msg: "Only receivers can claim donations" });
-    }
-
     const donation = await Donation.findById(req.params.id);
-    if (!donation) return res.status(404).json({ msg: "Donation not found" });
-
-    if (donation.status !== "available") {
-      return res
-        .status(400)
-        .json({ msg: "Donation already claimed or expired" });
-    }
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
 
     donation.status = "claimed";
-    donation.receiver = req.user.userId; // save receiver id
+    donation.receiver = req.user.userId; // receiver set
     await donation.save();
+    await donation.populate("receiver", "name email");
 
-    res.json({ msg: "Donation claimed successfully", donation });
+    res
+      .status(200)
+      .json({ message: "Donation claimed successfully", donation });
   } catch (err) {
-    console.error("❌ Claim donation error:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================== Get donations created by logged-in donor ==================
-exports.getMyDonations = async (req, res) => {
-  try {
-    if (req.user.role !== "donor") {
-      return res
-        .status(403)
-        .json({ msg: "Only donors can view their donations" });
-    }
-
-    const donations = await Donation.find({ donor: req.user.userId });
-    res.json(donations);
-  } catch (err) {
-    console.error("❌ Get my donations error:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
-  }
-};
-
-// ================== Get donations claimed by logged-in receiver ==================
-exports.getMyClaims = async (req, res) => {
-  try {
-    if (req.user.role !== "receiver") {
-      return res
-        .status(403)
-        .json({ msg: "Only receivers can view their claimed donations" });
-    }
-
-    const donations = await Donation.find({
-      receiver: req.user.userId,
-    }).populate("donor", "name");
-
-    res.json(donations);
-  } catch (err) {
-    console.error("❌ Get my claims error:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
-  }
-};
-
-// ================== Mark donation as picked up (Donor only) ==================
+// Pickup donation (Donor)
 exports.pickupDonation = async (req, res) => {
   try {
-    if (req.user.role !== "donor") {
-      return res
-        .status(403)
-        .json({ msg: "Only donors can mark donations as picked up" });
-    }
-
-    const donationId = req.params.id;
-    const donation = await Donation.findById(donationId);
-
-    if (!donation) return res.status(404).json({ msg: "Donation not found" });
-
-    if (!donation.donor || donation.donor.toString() !== req.user.userId) {
-      return res
-        .status(403)
-        .json({ msg: "You can only update your own donations" });
-    }
-
-    if (donation.status !== "claimed") {
-      return res.status(400).json({ msg: "Donation not yet claimed" });
-    }
+    const donation = await Donation.findById(req.params.id).populate(
+      "receiver",
+      "name email"
+    );
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
 
     donation.status = "pickedUp";
     await donation.save();
 
-    res.json({ msg: "Donation marked as picked up", donation });
+    res
+      .status(200)
+      .json({ message: "Donation picked up successfully", donation });
   } catch (err) {
-    console.error("❌ Pickup donation error:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================== Mark donation as delivered (Donor only) ==================
-// ================== Mark donation as delivered (Donor or Admin) ==================
+// Deliver donation (Donor)
 exports.deliverDonation = async (req, res) => {
   try {
-    const donation = await Donation.findById(req.params.id);
-    if (!donation) return res.status(404).json({ msg: "Donation not found" });
-
-    // Only donor or admin can mark delivered
-    if (req.user.role === "donor") {
-      if (donation.donor.toString() !== req.user.userId) {
-        return res.status(403).json({ msg: "Not authorized" });
-      }
-    } else if (req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({ msg: "Only donors or admins can mark as delivered" });
-    }
-
-    if (donation.status !== "pickedUp") {
-      return res.status(400).json({ msg: "Donation not yet picked up" });
-    }
+    const donation = await Donation.findById(req.params.id).populate(
+      "receiver",
+      "name email"
+    );
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
 
     donation.status = "delivered";
-    donation.deliveredAt = new Date();
     await donation.save();
 
-    res.json({ msg: "Donation marked as delivered", donation });
+    res
+      .status(200)
+      .json({ message: "Donation delivered successfully", donation });
   } catch (err) {
-    console.error("❌ Deliver donation error:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ================== Mark donation as completed (Receiver or Admin) ==================
 exports.completeDonation = async (req, res) => {
   try {
-    const donation = await Donation.findById(req.params.id);
-    if (!donation) return res.status(404).json({ msg: "Donation not found" });
+    const donation = await Donation.findById(req.params.id).populate(
+      "receiver",
+      "name email"
+    );
+    if (!donation)
+      return res.status(404).json({ message: "Donation not found" });
 
-    // Only receiver or admin can mark completed
-    if (req.user.role === "receiver") {
-      if (donation.receiver.toString() !== req.user.userId) {
-        return res.status(403).json({ msg: "Not authorized" });
-      }
-    } else if (req.user.role !== "admin") {
+    // Fix: Check logged-in receiver with _id
+    if (donation.receiver?._id.toString() !== req.user.userId)
       return res
         .status(403)
-        .json({ msg: "Only receivers or admins can mark as completed" });
-    }
-
-    if (donation.status !== "delivered") {
-      return res.status(400).json({ msg: "Donation not yet delivered" });
-    }
+        .json({ message: "Not authorized to complete this donation" });
 
     donation.status = "completed";
-    donation.completedAt = new Date();
     await donation.save();
 
-    res.json({ msg: "Donation marked as completed", donation });
+    res
+      .status(200)
+      .json({ message: "Donation completed successfully", donation });
   } catch (err) {
-    console.error("❌ Complete donation error:", err.message);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get my donations (Donor)
+exports.getMyDonations = async (req, res) => {
+  try {
+    const donations = await Donation.find({ donor: req.user.userId })
+      .populate("donor", "name email")
+      .populate("receiver", "name email");
+    res.status(200).json(donations);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get my claimed donations (Receiver)
+exports.getMyClaims = async (req, res) => {
+  try {
+    const donations = await Donation.find({ receiver: req.user.userId })
+      .populate("donor", "name email")
+      .populate("receiver", "name email");
+    res.status(200).json(donations);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
