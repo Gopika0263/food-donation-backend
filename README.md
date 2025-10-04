@@ -14,12 +14,12 @@ This is the **backend** for the Food Donation project using the **MERN stack**.
 ---
 
 ## Live Backend URL
-[https://food-donation-backend-b8wx.onrender.com](https://food-donation-backend-b8wx.onrender.com)
+https://food-donation-backend-2-2kwi.onrender.com
 
 ---
 
 ## Frontend URL
-[https://donation-frontend-coral.vercel.app](https://donation-frontend-coral.vercel.app)
+https://donation-frontend-72ik.vercel.app/
 
 ---
 
