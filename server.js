@@ -22,7 +22,7 @@ mongoose
 const app = express();
 
 // CORS for frontend only
-app.use(cors({ origin: "https://donation-frontend-72ik.vercel.app/" }));
+app.use(cors({ origin: "https://donation-frontend-72ik.vercel.app" }));
 app.use(express.json());
 
 // Routes
